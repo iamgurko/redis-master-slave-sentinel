@@ -1,0 +1,38 @@
+version: '3.9'
+services:
+  redis-master:
+    container_name: redis_master
+    image: redis:alpine
+    restart: always
+    ports:
+      - '6379:6379'
+    command: redis-server --loglevel warning
+    volumes:
+      - ./docker-volumes/cache:/data
+
+  redis-slave:
+    container_name: redis_slave
+    image: redis:alpine
+    restart: always
+    command: redis-server --slaveof redis_master 6379 --loglevel warning
+    depends_on:
+      - redis-master
+
+  redis-commander:
+    container_name: redis-commander
+    image: ghcr.io/joeferner/redis-commander:latest
+    restart: always
+    ports:
+      - '8081:8081'
+    environment:
+    - REDIS_HOSTS=local:redis_master:6379
+
+  redis-sentinel:
+    container_name: redis_sentinel
+    image: bitnami/redis-sentinel:latest
+    environment:
+      - REDIS_MASTER_HOST=redis_master
+    ports:
+      - '26379:26379'
+    depends_on:
+      - redis-master
